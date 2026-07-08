@@ -1,0 +1,25 @@
+# vanhieu-dashboard
+
+Scaffold for a realtime dashboard to show telesales results (from CRM) and Google Ads linkage.
+
+This repository contains two folders:
+
+- backend: Node.js + Express + Socket.IO webhook stub
+- frontend: simple static page connecting via Socket.IO to display incoming CRM events
+
+Local dev (quick):
+
+1. Backend
+   - cd backend
+   - npm install
+   - npm start
+   - POST JSON to http://localhost:3000/webhook/crm to simulate CRM webhook
+
+2. Frontend
+   - cd frontend
+   - npm install
+   - npm start
+   - open http://localhost:8080 (default) to view events
+
+Next steps:
+- Create a feature branch `feature/dashboard-skeleton` with the full scaffold (backend + frontend).
