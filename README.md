@@ -26,3 +26,7 @@ Next steps:
 ## Claude Code skills
 
 - `.claude/skills/humanizer`: [Humanizer](https://github.com/blader/humanizer) skill (MIT). Rewrites AI-sounding text so it reads naturally. Use `/humanizer` in Claude Code sessions on this repo.
+
+## Đăng sản phẩm tự động (Haravan)
+
+- `product-poster/`: nhập tên + giá, AI viết bài sản phẩm chuẩn SEO và lưu nháp lên Haravan. Xem `product-poster/README.md`.

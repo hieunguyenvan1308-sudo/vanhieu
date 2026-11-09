@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đăng sản phẩm tự động</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --text: #1d2330; --muted: #667085; --line: #dde1e7;
+    --accent: #1f6feb; --accent-text: #fff; --warn-bg: #fff6e0; --warn-line: #f0c36d;
+    --ok-bg: #e8f6ec; --ok-line: #7cc694; --err-bg: #fdecec; --err-line: #e68a8a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  main { max-width: 920px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  .row { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+  label { display: block; font-weight: 600; margin: 12px 0 4px; }
+  label .count { font-weight: 400; color: var(--muted); float: right; }
+  label .count.bad { color: #c0392b; }
+  input, textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 7px; font: inherit; background: #fff; color: var(--text); }
+  textarea { resize: vertical; }
+  details { margin-top: 12px; }
+  summary { cursor: pointer; color: var(--accent); }
+  button { font: inherit; font-weight: 600; padding: 10px 18px; border-radius: 7px; border: 0; cursor: pointer; background: var(--accent); color: var(--accent-text); }
+  button.secondary { background: #fff; color: var(--text); border: 1px solid var(--line); }
+  button:disabled { opacity: .55; cursor: wait; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+  .msg { padding: 10px 14px; border-radius: 7px; margin-top: 12px; border: 1px solid; }
+  .msg.warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  .msg.ok { background: var(--ok-bg); border-color: var(--ok-line); }
+  .msg.err { background: var(--err-bg); border-color: var(--err-line); }
+  .msg ul { margin: 6px 0 0; padding-left: 20px; }
+  .serp { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-top: 8px; }
+  .serp .url { color: #188038; font-size: 13px; }
+  .serp .t { color: #1a0dab; font-size: 18px; margin: 2px 0; }
+  .serp .d { color: #4d5156; font-size: 14px; }
+  .preview { border: 1px solid var(--line); border-radius: 8px; padding: 4px 18px; max-height: 520px; overflow: auto; }
+  .preview table { border-collapse: collapse; width: 100%; }
+  .preview th, .preview td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; }
+  .tabs { display: flex; gap: 6px; margin-top: 12px; }
+  .tabs button { padding: 6px 12px; }
+  .hidden { display: none; }
+  .spinner { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Đăng sản phẩm tự động</h1>
+  <p class="sub">Nhập tên và giá. AI viết bài chuẩn SEO, anh xem lại rồi lưu nháp lên Haravan.</p>
+
+  <section class="card">
+    <form id="genForm">
+      <div class="row">
+        <div>
+          <label for="name">Tên sản phẩm</label>
+          <input id="name" required placeholder="VD: Điều hòa Hisense Inverter 1 HP AS-10TR4RYDTU03">
+        </div>
+        <div>
+          <label for="price">Giá bán (₫)</label>
+          <input id="price" required inputmode="numeric" placeholder="VD: 6.490.000">
+        </div>
+      </div>
+      <details>
+        <summary>Tùy chọn thêm (không bắt buộc)</summary>
+        <div class="row">
+          <div>
+            <label for="sku">Mã SKU</label>
+            <input id="sku">
+          </div>
+          <div>
+            <label for="comparePrice">Giá gốc trước giảm (₫)</label>
+            <input id="comparePrice" inputmode="numeric">
+          </div>
+        </div>
+        <label for="imageUrl">Link ảnh sản phẩm</label>
+        <input id="imageUrl" placeholder="https://...">
+        <label for="notes">Thông số / ghi chú (AI sẽ dùng thông tin này thay vì tự đoán)</label>
+        <textarea id="notes" rows="4" placeholder="VD: Công suất 9.000 BTU, gas R32, bảo hành 2 năm, tặng ống đồng 3m"></textarea>
+      </details>
+      <div class="actions">
+        <button id="genBtn" type="submit">Tạo bài viết</button>
+        <span id="genStatus" class="spinner"></span>
+      </div>
+      <div id="genMsg"></div>
+    </form>
+  </section>
+
+  <section id="result" class="card hidden">
+    <div id="review"></div>
+
+    <label for="title">Tên sản phẩm trên web</label>
+    <input id="title">
+
+    <label for="seo_title">Tiêu đề SEO <span class="count" id="seo_title_count"></span></label>
+    <input id="seo_title">
+
+    <label for="meta_description">Mô tả SEO <span class="count" id="meta_description_count"></span></label>
+    <textarea id="meta_description" rows="2"></textarea>
+
+    <label>Xem trước trên Google</label>
+    <div class="serp">
+      <div class="url" id="serpUrl"></div>
+      <div class="t" id="serpTitle"></div>
+      <div class="d" id="serpDesc"></div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="handle">Đường dẫn (URL)</label>
+        <input id="handle">
+      </div>
+      <div>
+        <label for="focus_keyword">Từ khóa chính</label>
+        <input id="focus_keyword">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="tags">Tags (cách nhau bằng dấu phẩy)</label>
+        <input id="tags">
+      </div>
+      <div>
+        <label for="vendor">Thương hiệu</label>
+        <input id="vendor">
+      </div>
+    </div>
+    <label for="product_type">Loại sản phẩm</label>
+    <input id="product_type">
+
+    <label>Bài viết</label>
+    <div class="tabs">
+      <button type="button" class="secondary" data-tab="preview">Xem trước</button>
+      <button type="button" class="secondary" data-tab="html">Sửa HTML</button>
+    </div>
+    <div id="bodyPreview" class="preview" style="margin-top:8px"></div>
+    <textarea id="body_html" rows="18" class="hidden" style="margin-top:8px;font-family:ui-monospace,monospace;font-size:13px"></textarea>
+
+    <div class="actions">
+      <button id="pubBtn" type="button">Lưu nháp lên Haravan</button>
+      <button id="regenBtn" type="button" class="secondary">Viết lại</button>
+      <span id="pubStatus" class="spinner"></span>
+    </div>
+    <div id="pubMsg"></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const FIELDS = ["title", "seo_title", "meta_description", "handle", "focus_keyword", "vendor", "product_type", "body_html"];
+let current = null;
+let storeName = "";
+
+fetch("/api/config").then(r => r.json()).then(cfg => {
+  storeName = cfg.storeName || "";
+  if (!cfg.haravan) {
+    $("pubBtn").disabled = true;
+    $("pubBtn").title = "Chưa cấu hình HARAVAN_ACCESS_TOKEN";
+  }
+}).catch(() => {});
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function showMsg(el, type, html) {
+  el.innerHTML = `<div class="msg ${type}">${html}</div>`;
+}
+
+function updateCounts() {
+  const t = $("seo_title").value, d = $("meta_description").value;
+  $("seo_title_count").textContent = `${t.length}/60`;
+  $("seo_title_count").classList.toggle("bad", t.length > 60);
+  $("meta_description_count").textContent = `${d.length}/160`;
+  $("meta_description_count").classList.toggle("bad", d.length > 160 || d.length < 120);
+  $("serpTitle").textContent = t;
+  $("serpDesc").textContent = d;
+  $("serpUrl").textContent = `${storeName || "website-cua-anh"} › products › ${$("handle").value}`;
+}
+
+function renderPreview() {
+  // Preview only: the HTML comes from our own AI call, shown in a sandboxed-by-tag-list way.
+  const tpl = document.createElement("template");
+  tpl.innerHTML = $("body_html").value;
+  tpl.content.querySelectorAll("script,style,iframe,object,embed").forEach(n => n.remove());
+  tpl.content.querySelectorAll("*").forEach(n => [...n.attributes].forEach(a => { if (/^on/i.test(a.name)) n.removeAttribute(a.name); }));
+  $("bodyPreview").replaceChildren(tpl.content);
+}
+
+function fill(content) {
+  current = content;
+  FIELDS.forEach(f => { $(f).value = content[f] || ""; });
+  $("tags").value = (content.tags || []).join(", ");
+  const items = (content.needs_review || []).map(x => `<li>${esc(x)}</li>`).join("");
+  $("review").innerHTML = items
+    ? `<div class="msg warn"><strong>Cần kiểm tra trước khi đăng:</strong><ul>${items}</ul></div>`
+    : "";
+  updateCounts();
+  renderPreview();
+  $("pubMsg").innerHTML = "";
+  $("result").classList.remove("hidden");
+}
+
+function collect() {
+  const c = { ...current };
+  FIELDS.forEach(f => { c[f] = $(f).value.trim(); });
+  c.tags = $("tags").value.split(",").map(s => s.trim()).filter(Boolean);
+  return c;
+}
+
+async function post(url, body) {
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({ error: `Lỗi máy chủ (${res.status})` }));
+  if (!res.ok) throw new Error(data.error || `Lỗi ${res.status}`);
+  return data;
+}
+
+async function generate() {
+  $("genBtn").disabled = $("regenBtn").disabled = true;
+  $("genStatus").textContent = "AI đang viết bài, mất khoảng 30-60 giây...";
+  $("genMsg").innerHTML = "";
+  try {
+    const { content } = await post("/api/generate", {
+      name: $("name").value, price: $("price").value,
+      comparePrice: $("comparePrice").value, notes: $("notes").value,
+    });
+    fill(content);
+    $("result").scrollIntoView({ behavior: "smooth" });
+  } catch (e) {
+    showMsg($("genMsg"), "err", esc(e.message));
+  } finally {
+    $("genBtn").disabled = $("regenBtn").disabled = false;
+    $("genStatus").textContent = "";
+  }
+}
+
+$("genForm").addEventListener("submit", e => { e.preventDefault(); generate(); });
+$("regenBtn").addEventListener("click", generate);
+["seo_title", "meta_description", "handle"].forEach(id => $(id).addEventListener("input", updateCounts));
+$("body_html").addEventListener("input", renderPreview);
+
+document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => {
+  const html = b.dataset.tab === "html";
+  $("body_html").classList.toggle("hidden", !html);
+  $("bodyPreview").classList.toggle("hidden", html);
+  if (!html) renderPreview();
+}));
+
+$("pubBtn").addEventListener("click", async () => {
+  $("pubBtn").disabled = true;
+  $("pubStatus").textContent = "Đang lưu lên Haravan...";
+  $("pubMsg").innerHTML = "";
+  try {
+    const r = await post("/api/publish", {
+      content: collect(), price: $("price").value, comparePrice: $("comparePrice").value,
+      sku: $("sku").value, imageUrl: $("imageUrl").value,
+    });
+    const link = r.adminUrl ? ` <a href="${esc(r.adminUrl)}" target="_blank" rel="noopener">Mở trong trang quản trị</a>` : "";
+    showMsg($("pubMsg"), "ok", `Đã lưu nháp (ẩn khỏi web), mã sản phẩm ${esc(r.id)}. Vào Haravan kiểm tra rồi bật hiển thị.${link}`);
+  } catch (e) {
+    showMsg($("pubMsg"), "err", esc(e.message));
+  } finally {
+    $("pubBtn").disabled = false;
+    $("pubStatus").textContent = "";
+  }
+});
+</script>
+</body>
+</html>
