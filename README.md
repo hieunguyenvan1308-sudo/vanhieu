@@ -23,3 +23,6 @@ Local dev (quick):
 
 Next steps:
 - Create a feature branch `feature/dashboard-skeleton` with the full scaffold (backend + frontend).
+## Claude Code skills
+
+- `.claude/skills/humanizer`: [Humanizer](https://github.com/blader/humanizer) skill (MIT). Rewrites AI-sounding text so it reads naturally. Use `/humanizer` in Claude Code sessions on this repo.
